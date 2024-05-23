@@ -15,6 +15,10 @@ test:
 clean:
 	rm -rf ./build
 
+.PHONY: run
+run:
+	go run cmd/server/main.go
+
 .PHONY: migration_up
 migration_up:
 	migrate -source file://db/migrations -database "postgres://$(DATABASE_USER):$(DATABASE_PASSWORD)@localhost:5432/$(DATABASE_NAME)?sslmode=disable" up $(if $(N),$(N),)
