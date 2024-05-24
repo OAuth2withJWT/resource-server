@@ -32,6 +32,7 @@ func (cr *CardRepository) GetCardsByUserId(userId int) ([]app.Card, error) {
 		}
 		cards = append(cards, card)
 	}
+
 	return cards, nil
 }
 
@@ -39,10 +40,16 @@ func (cr *CardRepository) GetTotalBalanceByUserId(userId int) (app.BalanceRespon
 	balance := app.BalanceResponse{
 		UserId: userId,
 	}
-	err := cr.db.QueryRow("SELECT SUM(current_balance) AS total_balance FROM cards WHERE user_id = $1", userId).Scan(&balance.TotalBalance)
+	var totalBalance sql.NullFloat64
+	err := cr.db.QueryRow("SELECT SUM(current_balance) AS total_balance FROM cards WHERE user_id = $1", userId).Scan(&totalBalance)
 	if err != nil {
 		return app.BalanceResponse{}, err
 	}
 
+	if totalBalance.Valid {
+		balance.TotalBalance = totalBalance.Float64
+	} else {
+		return app.BalanceResponse{}, &app.InvalidUserIdError{UserId: userId}
+	}
 	return balance, nil
 }

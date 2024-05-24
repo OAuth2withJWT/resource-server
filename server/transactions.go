@@ -1,38 +1,52 @@
 package server
 
 import (
-	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
-func (s *Server) handleRetrieveTransactionsByCriteria(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleGetTotalAmount(w http.ResponseWriter, r *http.Request) {
 	category := r.URL.Query().Get("category")
 
-	amount, err := strconv.ParseFloat(r.URL.Query().Get("amount"), 64)
+	vars := mux.Vars(r)
+	userId, err := strconv.Atoi(vars["user_id"])
 	if err != nil {
-		http.Error(w, "Invalid amount", http.StatusBadRequest)
+		log.Print("Invalid user id: ", userId)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	date, err := time.Parse("2006-01-02", r.URL.Query().Get("date"))
+	time, err := time.Parse("2006-01-02 15:04:05", r.URL.Query().Get("time"))
 	if err != nil {
-		http.Error(w, "Invalid date", http.StatusBadRequest)
+		log.Print("Invalid date/time: ", time)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	transaction, err := s.app.TransactionService.GetTransactionByCategoryAmountAndDate(category, amount, date)
-
+	cards, err := s.app.CardService.GetCardsByUserId(userId)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		log.Print("Internal server error")
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(transaction)
+	if len(cards) == 0 {
+		log.Print("Invalid user id: ", userId)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	amount, err := s.app.TransactionService.GetTotalAmountByCategoryAndTime(cards, category, time)
+	if err != nil {
+		log.Print("Internal server error")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(amount)
 }

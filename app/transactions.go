@@ -15,22 +15,33 @@ func NewTransactionService(tr TransactionRepository) *TransactionService {
 }
 
 type TransactionRepository interface {
-	GetTransactionByCategoryAmountAndDate(category string, amount float64, date time.Time) (Transaction, error)
+	GetTotalAmountByCategoryAndTime(cardId int, category string, time time.Time) (AmountResponse, error)
 }
 
 type Transaction struct {
 	Id       int       `json:"id"`
 	CardId   int       `json:"card_id"`
-	Date     time.Time `json:"date"`
+	Time     time.Time `json:"date"`
 	Amount   float64   `json:"amount"`
 	Category string    `json:"category"`
+	Location string    `json:"location"`
 }
 
-func (s *TransactionService) GetTransactionByCategoryAmountAndDate(category string, amount float64, date time.Time) (Transaction, error) {
-	transaction, err := s.repository.GetTransactionByCategoryAmountAndDate(category, amount, date)
-	if err != nil {
-		return Transaction{}, err
+type AmountResponse struct {
+	Category    string  `json:"category"`
+	TotalAmount float64 `json:"total_amount"`
+}
+
+func (s *TransactionService) GetTotalAmountByCategoryAndTime(cards []Card, category string, date time.Time) (AmountResponse, error) {
+	totalAmount := AmountResponse{Category: category}
+	for _, card := range cards {
+		amount, err := s.repository.GetTotalAmountByCategoryAndTime(card.Id, category, date)
+		if err != nil {
+			return AmountResponse{}, err
+		}
+
+		totalAmount.TotalAmount += amount.TotalAmount
 	}
 
-	return transaction, nil
+	return totalAmount, nil
 }

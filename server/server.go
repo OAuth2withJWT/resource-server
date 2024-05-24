@@ -28,6 +28,6 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) setupRoutes() {
-	s.router.HandleFunc("/api/cards/balance/{user_id}", s.handleGetBalance).Methods("GET")
-	s.router.HandleFunc("/api/transactions/search", s.handleRetrieveTransactionsByCriteria).Methods("GET")
+	s.router.HandleFunc("/api/cards/balance/{user_id}", s.handleGetTotalBalance).Methods("GET")
+	s.router.HandleFunc("/api/transactions/amount/{user_id}", s.handleGetTotalAmount).Methods("GET")
 }
