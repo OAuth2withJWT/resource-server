@@ -23,8 +23,8 @@ type Card struct {
 }
 
 type BalanceResponse struct {
-	UserId       int     `json:"user_id"`
-	TotalBalance float64 `json:"total_balance"`
+	UserId     int     `json:"user_id"`
+	TotalValue float64 `json:"total_balance"`
 }
 
 func (s *CardService) GetCardsByUserId(userId int) ([]Card, error) {

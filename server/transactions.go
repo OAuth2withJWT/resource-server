@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/OAuth2withJWT/resource-server/app"
 	"github.com/gorilla/mux"
 )
 
@@ -21,7 +22,7 @@ func (s *Server) handleGetTotalAmount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	time, err := time.Parse("2006-01-02 15:04:05", r.URL.Query().Get("time"))
+	time, err := time.Parse("2006-01-02 15:04:05", r.URL.Query().Get("date")+" "+r.URL.Query().Get("time"))
 	if err != nil {
 		log.Print("Invalid date/time: ", time)
 		w.WriteHeader(http.StatusBadRequest)
@@ -41,7 +42,12 @@ func (s *Server) handleGetTotalAmount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	amount, err := s.app.TransactionService.GetTotalAmountByCategoryAndTime(cards, category, time)
+	var amount app.AmountResponse
+	if category == "" {
+		amount, err = s.app.TransactionService.GetTotalAmountByTime(cards, time)
+	} else {
+		amount, err = s.app.TransactionService.GetTotalAmountByCategoryAndTime(cards, category, time)
+	}
 	if err != nil {
 		log.Print("Internal server error")
 		w.WriteHeader(http.StatusInternalServerError)

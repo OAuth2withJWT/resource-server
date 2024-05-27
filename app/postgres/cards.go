@@ -47,7 +47,7 @@ func (cr *CardRepository) GetTotalBalanceByUserId(userId int) (app.BalanceRespon
 	}
 
 	if totalBalance.Valid {
-		balance.TotalBalance = totalBalance.Float64
+		balance.TotalValue = totalBalance.Float64
 	} else {
 		return app.BalanceResponse{}, &app.InvalidUserIdError{UserId: userId}
 	}

@@ -47,9 +47,27 @@ func (tr *TransactionRepository) GetTotalAmountByCategoryAndTime(cardId int, cat
 	}
 
 	if totalAmount.Valid {
-		amount.TotalAmount = totalAmount.Float64
+		amount.TotalValue = totalAmount.Float64
 	} else {
-		amount.TotalAmount = 0
+		amount.TotalValue = 0
+	}
+
+	return amount, nil
+}
+
+func (tr *TransactionRepository) GetTotalAmountByTime(cardId int, time time.Time) (app.AmountResponse, error) {
+	var amount app.AmountResponse
+	var totalAmount sql.NullFloat64
+
+	err := tr.db.QueryRow("SELECT SUM(amount) AS total_amount FROM transactions WHERE card_id = $1 AND time > $2", cardId, time).Scan(&totalAmount)
+	if err != nil {
+		return app.AmountResponse{}, err
+	}
+
+	if totalAmount.Valid {
+		amount.TotalValue = totalAmount.Float64
+	} else {
+		amount.TotalValue = 0
 	}
 
 	return amount, nil
