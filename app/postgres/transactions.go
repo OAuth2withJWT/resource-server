@@ -18,8 +18,27 @@ func NewTransactionRepository(db *sql.DB) *TransactionRepository {
 	}
 }
 
-func (tr *TransactionRepository) GetTransactionsByCategoryAndTime(category string, time time.Time) ([]app.Transaction, error) {
-	rows, err := tr.db.Query("SELECT id, card_id, time, amount, category, location FROM transactions WHERE category = $1 AND time > $2", category, time)
+func (tr *TransactionRepository) GetTransactionsByCategoryAndTime(cardId int, category string, time time.Time) ([]app.Transaction, error) {
+	rows, err := tr.db.Query("SELECT id, card_id, time, amount, category, location FROM transactions WHERE card_id = $1 AND category = $2 AND time > $3", cardId, category, time)
+	if err != nil {
+		return []app.Transaction{}, err
+	}
+
+	var transactions []app.Transaction
+	for rows.Next() {
+		var transaction app.Transaction
+		err := rows.Scan(&transaction.Id, &transaction.CardId, &transaction.Time, &transaction.Amount, &transaction.Category, &transaction.Location)
+		if err != nil {
+			log.Fatal(err)
+		}
+		transactions = append(transactions, transaction)
+	}
+
+	return transactions, nil
+}
+
+func (tr *TransactionRepository) GetTransactionsByTime(cardId int, time time.Time) ([]app.Transaction, error) {
+	rows, err := tr.db.Query("SELECT id, card_id, time, amount, category, location FROM transactions WHERE card_id = $1 AND time > $2", cardId, time)
 	if err != nil {
 		return []app.Transaction{}, err
 	}

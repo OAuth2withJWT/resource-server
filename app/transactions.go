@@ -15,6 +15,8 @@ func NewTransactionService(tr TransactionRepository) *TransactionService {
 }
 
 type TransactionRepository interface {
+	GetTransactionsByCategoryAndTime(cardId int, category string, time time.Time) ([]Transaction, error)
+	GetTransactionsByTime(cardId int, time time.Time) ([]Transaction, error)
 	GetTotalAmountByCategoryAndTime(cardId int, category string, time time.Time) (AmountResponse, error)
 	GetTotalAmountByTime(cardId int, time time.Time) (AmountResponse, error)
 }
@@ -59,4 +61,32 @@ func (s *TransactionService) GetTotalAmountByTime(cards []Card, date time.Time) 
 	}
 
 	return totalAmount, nil
+}
+
+func (s *TransactionService) GetTransactionsByCategoryAndTime(cards []Card, category string, date time.Time) ([]Transaction, error) {
+	allTransactions := []Transaction{}
+	for _, card := range cards {
+		transactions, err := s.repository.GetTransactionsByCategoryAndTime(card.Id, category, date)
+		if err != nil {
+			return []Transaction{}, err
+		}
+
+		allTransactions = append(allTransactions, transactions...)
+	}
+
+	return allTransactions, nil
+}
+
+func (s *TransactionService) GetTransactionsByTime(cards []Card, date time.Time) ([]Transaction, error) {
+	allTransactions := []Transaction{}
+	for _, card := range cards {
+		transactions, err := s.repository.GetTransactionsByTime(card.Id, date)
+		if err != nil {
+			return []Transaction{}, err
+		}
+
+		allTransactions = append(allTransactions, transactions...)
+	}
+
+	return allTransactions, nil
 }
