@@ -28,7 +28,7 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) setupRoutes() {
-	s.router.HandleFunc("/api/cards/balance/{user_id}", s.handleGetTotalBalance).Methods("GET")
-	s.router.HandleFunc("/api/transactions/{user_id}", s.handleGetTransactions).Methods("GET")
-	s.router.HandleFunc("/api/transactions/amount/{user_id}", s.handleGetTotalAmount).Methods("GET")
+	s.router.Handle("/api/cards/balance/{user_id}", s.protected(http.HandlerFunc(s.handleGetTotalBalance))).Methods("GET")
+	s.router.Handle("/api/transactions/{user_id}", s.protected(http.HandlerFunc(s.handleGetTransactions))).Methods("GET")
+	s.router.Handle("/api/transactions/amount/{user_id}", s.protected(http.HandlerFunc(s.handleGetTotalAmount))).Methods("GET")
 }
