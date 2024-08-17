@@ -1,14 +1,39 @@
 package server
 
 import (
-	"encoding/json"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
 )
+
+var publicKey *rsa.PublicKey
+
+func init() {
+	pubKeyData, err := os.ReadFile("keys/public_key.pem")
+	if err != nil {
+		panic(fmt.Sprintf("Failed to load public key: %v", err))
+	}
+
+	block, _ := pem.Decode(pubKeyData)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		panic("Failed to decode PEM block containing public key")
+	}
+
+	pubKeyInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to parse public key: %v", err))
+	}
+
+	publicKey = pubKeyInterface.(*rsa.PublicKey)
+}
 
 type VerificationRequest struct {
 	Token string `json:"token"`
@@ -34,9 +59,9 @@ func (s *Server) protected(next http.Handler) http.Handler {
 		}
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 
-		response, err := s.verifyTokenWithIdP(token)
-		if err != nil || response.Active == "false" {
-			log.Print("Invalid token ", err.Error())
+		parsedToken, err := s.VerifyToken(token)
+		if err != nil {
+			log.Printf("Token verification failed: %v", err)
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -51,7 +76,11 @@ func (s *Server) protected(next http.Handler) http.Handler {
 			}
 		}
 
-		if !containsScope(response.Scope, routeGroup) {
+		claims, _ := parsedToken.Claims.(jwt.MapClaims)
+
+		scope := claims["scope"].([]interface{})
+
+		if !containsScope(scope, routeGroup) {
 			log.Print("Insufficient scopes")
 			w.WriteHeader(http.StatusForbidden)
 			return
@@ -61,43 +90,30 @@ func (s *Server) protected(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) verifyTokenWithIdP(token string) (VerificationResponse, error) {
-	req, err := http.NewRequest("POST", "http://localhost:8080/oauth2/token/verify", strings.NewReader(fmt.Sprintf(`{"token": "%s"}`, token)))
-	if err != nil {
-		return VerificationResponse{}, fmt.Errorf("failed to create request")
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return VerificationResponse{}, fmt.Errorf("failed to verify token")
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		var response VerificationErrorResponse
-		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-			return VerificationResponse{}, fmt.Errorf("failed to decode response")
+func (s *Server) VerifyToken(tokenString string) (*jwt.Token, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
+		return publicKey, nil
+	})
 
-		return VerificationResponse{}, fmt.Errorf(response.ErrorDescription)
+	if err != nil {
+		return nil, err
 	}
 
-	var response VerificationResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return VerificationResponse{}, fmt.Errorf("failed to decode response")
+	if !token.Valid {
+		return nil, fmt.Errorf("invalid token")
 	}
 
-	return response, nil
+	return token, nil
 }
 
-func containsScope(tokenScope []string, routeGroup string) bool {
+func containsScope(tokenScope []interface{}, routeGroup string) bool {
 	for _, s := range tokenScope {
-		if strings.Contains(s, routeGroup) {
+		if scope, ok := s.(string); ok && strings.Contains(scope, routeGroup) {
 			return true
 		}
 	}
-
 	return false
 }
