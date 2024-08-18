@@ -5,18 +5,21 @@ import (
 	"net/http"
 
 	"github.com/OAuth2withJWT/resource-server/app"
+	"github.com/OAuth2withJWT/resource-server/config"
 	"github.com/gorilla/mux"
 )
 
 type Server struct {
-	router *mux.Router
-	app    *app.Application
+	router    *mux.Router
+	app       *app.Application
+	RSAConfig config.RSAConfig
 }
 
 func New(a *app.Application) *Server {
 	s := &Server{
-		router: mux.NewRouter(),
-		app:    a,
+		router:    mux.NewRouter(),
+		app:       a,
+		RSAConfig: config.LoadRSAConfig(),
 	}
 	s.setupRoutes()
 	return s

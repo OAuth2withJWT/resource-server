@@ -1,39 +1,14 @@
 package server
 
 import (
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
 )
-
-var publicKey *rsa.PublicKey
-
-func init() {
-	pubKeyData, err := os.ReadFile("keys/public_key.pem")
-	if err != nil {
-		panic(fmt.Sprintf("Failed to load public key: %v", err))
-	}
-
-	block, _ := pem.Decode(pubKeyData)
-	if block == nil || block.Type != "PUBLIC KEY" {
-		panic("Failed to decode PEM block containing public key")
-	}
-
-	pubKeyInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to parse public key: %v", err))
-	}
-
-	publicKey = pubKeyInterface.(*rsa.PublicKey)
-}
 
 type VerificationRequest struct {
 	Token string `json:"token"`
@@ -59,7 +34,7 @@ func (s *Server) protected(next http.Handler) http.Handler {
 		}
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 
-		parsedToken, err := s.VerifyToken(token)
+		parsedToken, err := s.ValidateToken(token)
 		if err != nil {
 			log.Printf("Token verification failed: %v", err)
 			w.WriteHeader(http.StatusUnauthorized)
@@ -90,12 +65,12 @@ func (s *Server) protected(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) VerifyToken(tokenString string) (*jwt.Token, error) {
+func (s *Server) ValidateToken(tokenString string) (*jwt.Token, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return publicKey, nil
+		return s.RSAConfig.PublicKey, nil
 	})
 
 	if err != nil {
@@ -104,6 +79,15 @@ func (s *Server) VerifyToken(tokenString string) (*jwt.Token, error) {
 
 	if !token.Valid {
 		return nil, fmt.Errorf("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("failed to extract claims from token")
+	}
+
+	if aud, ok := claims["aud"].(string); !ok || aud != s.RSAConfig.ResourceServer {
+		return nil, fmt.Errorf("invalid audience")
 	}
 
 	return token, nil
