@@ -15,8 +15,13 @@ type RSAConfig struct {
 }
 
 func LoadRSAConfig() RSAConfig {
+	resourceServer := os.Getenv("RESOURCE_SERVER")
+	if resourceServer == "" {
+		log.Fatalf("RESOURCE_SERVER environment variable not set")
+	}
+
 	config := RSAConfig{
-		ResourceServer: "http://localhost:3000/api",
+		ResourceServer: resourceServer,
 	}
 	publicKey, err := LoadPublicKey("keys/public_key.pem")
 	if err != nil {
