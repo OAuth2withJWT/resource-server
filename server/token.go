@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/gorilla/mux"
 )
 
 type VerificationRequest struct {
@@ -24,7 +23,7 @@ type VerificationResponse struct {
 	Scope  []string `json:"scope,omitempty"`
 }
 
-func (s *Server) protected(next http.Handler) http.Handler {
+func (s *Server) protected(next http.Handler, requiredScopes ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
@@ -34,30 +33,10 @@ func (s *Server) protected(next http.Handler) http.Handler {
 		}
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 
-		parsedToken, err := s.ValidateToken(token)
+		err := s.ValidateToken(token, requiredScopes)
 		if err != nil {
 			log.Printf("Token verification failed: %v", err)
 			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		currentRoute := mux.CurrentRoute(r)
-		routeGroup := ""
-
-		if currentRoute != nil {
-			if path, err := currentRoute.GetPathTemplate(); err == nil {
-				segments := strings.Split(path, "/")
-				routeGroup = segments[2]
-			}
-		}
-
-		claims, _ := parsedToken.Claims.(jwt.MapClaims)
-
-		scope := claims["scope"].([]interface{})
-
-		if !containsScope(scope, routeGroup) {
-			log.Print("Insufficient scopes")
-			w.WriteHeader(http.StatusForbidden)
 			return
 		}
 
@@ -65,7 +44,7 @@ func (s *Server) protected(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) ValidateToken(tokenString string) (*jwt.Token, error) {
+func (s *Server) ValidateToken(tokenString string, requiredScopes []string) error {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -74,30 +53,47 @@ func (s *Server) ValidateToken(tokenString string) (*jwt.Token, error) {
 	})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if !token.Valid {
-		return nil, fmt.Errorf("invalid token")
+		return fmt.Errorf("invalid token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, fmt.Errorf("failed to extract claims from token")
+		return fmt.Errorf("failed to extract claims from token")
 	}
 
 	if aud, ok := claims["aud"].(string); !ok || aud != s.RSAConfig.ResourceServer {
-		return nil, fmt.Errorf("invalid audience")
+		return fmt.Errorf("invalid audience")
 	}
 
-	return token, nil
+	scope, ok := claims["scope"].([]interface{})
+	if !ok {
+		return fmt.Errorf("invalid or missing scope in token")
+	}
+
+	if !containsScopes(scope, requiredScopes) {
+		return fmt.Errorf("insufficient scopes")
+	}
+
+	return nil
 }
 
-func containsScope(tokenScope []interface{}, routeGroup string) bool {
-	for _, s := range tokenScope {
-		if scope, ok := s.(string); ok && strings.Contains(scope, routeGroup) {
-			return true
+func containsScopes(tokenScopes []interface{}, requiredScopes []string) bool {
+	scopeSet := make(map[string]struct{})
+	for _, s := range tokenScopes {
+		if scope, ok := s.(string); ok {
+			scopeSet[scope] = struct{}{}
 		}
 	}
-	return false
+
+	for _, requiredScope := range requiredScopes {
+		if _, exists := scopeSet[requiredScope]; !exists {
+			return false
+		}
+	}
+
+	return true
 }
