@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"log"
 
 	"github.com/OAuth2withJWT/resource-server/app"
 )
@@ -18,21 +17,21 @@ func NewCardRepository(db *sql.DB) *CardRepository {
 }
 
 func (cr *CardRepository) GetCardsByUserId(userId int) ([]app.Card, error) {
-	rows, err := cr.db.Query("SELECT * FROM cards WHERE user_id = $1", userId)
+	rows, err := cr.db.Query("SELECT id, user_id, card_number, current_balance, TO_CHAR(expiration_date, 'DD/MM') AS expiration_date, card_type FROM cards WHERE user_id = $1", userId)
 	if err != nil {
 		return []app.Card{}, err
 	}
+	defer rows.Close()
 
 	var cards []app.Card
 	for rows.Next() {
 		var card app.Card
-		err := rows.Scan(&card.Id, &card.UserId, &card.CardNumber, &card.CurrentBalance)
+		err := rows.Scan(&card.Id, &card.UserId, &card.CardNumber, &card.CurrentBalance, &card.ExpirationDate, &card.CardType)
 		if err != nil {
-			log.Fatal(err)
+			return []app.Card{}, err
 		}
 		cards = append(cards, card)
 	}
-
 	return cards, nil
 }
 

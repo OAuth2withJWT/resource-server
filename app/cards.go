@@ -20,6 +20,8 @@ type Card struct {
 	UserId         int     `json:"user_id"`
 	CardNumber     string  `json:"card_number"`
 	CurrentBalance float64 `json:"current_balance"`
+	ExpirationDate string  `json:"expiration_date"`
+	CardType       string  `json:"card_type"`
 }
 
 type BalanceResponse struct {

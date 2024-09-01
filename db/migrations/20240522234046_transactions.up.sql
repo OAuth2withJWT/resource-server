@@ -1,13 +1,18 @@
-CREATE TYPE transaction_category AS ENUM (
+CREATE TYPE expense_category AS ENUM (
     'monthly',
     'groceries',
     'healthcare',
-    'rent',
-    'utilities',
-    'savings',
-    'transportation',
     'clothing',
-    'personal_care'
+    'entertainment',
+    'dining',
+    'transport',
+    'utilities',
+    'transfer'
+);
+
+CREATE TYPE transaction_type AS ENUM (
+    'income',
+    'expense'
 );
 
 CREATE TABLE transactions (
@@ -15,6 +20,9 @@ CREATE TABLE transactions (
     card_id INT NOT NULL,                
     time TIMESTAMP NOT NULL,                  
     amount DECIMAL(10, 2) NOT NULL,      
-    category transaction_category NOT NULL,
-    location VARCHAR(100) NOT NULL
+    expense_category expense_category,
+    transaction_type transaction_type NOT NULL,
+    location VARCHAR(100),
+    destination_account_id INT,
+    source_account_id INT
 );
