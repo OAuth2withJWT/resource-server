@@ -23,15 +23,13 @@ type TransactionRepository interface {
 }
 
 type Transaction struct {
-	Id                   int     `json:"id"`
-	CardId               int     `json:"card_id"`
-	Time                 string  `json:"time"`
-	Amount               float64 `json:"amount"`
-	ExpenseCategory      string  `json:"expense_category"`
-	TransactionType      string  `json:"transaction_type"`
-	Location             *string `json:"location"`
-	DestinationAccountId *int    `json:"destination_account_id"`
-	SourceAccountId      *int    `json:"source_account_id"`
+	Id              int     `json:"id"`
+	CardId          int     `json:"card_id"`
+	Time            string  `json:"time"`
+	Amount          float64 `json:"amount"`
+	ExpenseCategory string  `json:"expense_category"`
+	TransactionType string  `json:"transaction_type"`
+	Location        *string `json:"location"`
 }
 
 type AmountResponse struct {

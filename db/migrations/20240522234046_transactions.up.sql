@@ -22,7 +22,5 @@ CREATE TABLE transactions (
     amount DECIMAL(10, 2) NOT NULL,      
     expense_category expense_category,
     transaction_type transaction_type NOT NULL,
-    location VARCHAR(100),
-    destination_account_id INT,
-    source_account_id INT
+    location VARCHAR(100)
 );

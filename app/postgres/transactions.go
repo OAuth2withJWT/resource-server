@@ -41,7 +41,7 @@ func (tr *TransactionRepository) GetCategoryExpensesByTime(cardId int, time time
 }
 
 func (tr *TransactionRepository) GetTransactionsByTime(cardId int, time time.Time) ([]app.Transaction, error) {
-	rows, err := tr.db.Query("SELECT id, card_id, TO_CHAR(time, 'DD/MM/YYYY hh:mm:ss'), amount, expense_category, transaction_type, location, destination_account_id, source_account_id FROM transactions WHERE card_id = $1 AND time > $2", cardId, time)
+	rows, err := tr.db.Query("SELECT id, card_id, TO_CHAR(time, 'DD/MM/YYYY hh:mm:ss'), amount, expense_category, transaction_type, location FROM transactions WHERE card_id = $1 AND time > $2", cardId, time)
 	if err != nil {
 		return []app.Transaction{}, err
 	}
@@ -49,7 +49,7 @@ func (tr *TransactionRepository) GetTransactionsByTime(cardId int, time time.Tim
 	var transactions []app.Transaction
 	for rows.Next() {
 		var transaction app.Transaction
-		err := rows.Scan(&transaction.Id, &transaction.CardId, &transaction.Time, &transaction.Amount, &transaction.ExpenseCategory, &transaction.TransactionType, &transaction.Location, &transaction.DestinationAccountId, &transaction.SourceAccountId)
+		err := rows.Scan(&transaction.Id, &transaction.CardId, &transaction.Time, &transaction.Amount, &transaction.ExpenseCategory, &transaction.TransactionType, &transaction.Location)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -104,7 +104,7 @@ func (tr *TransactionRepository) GetTransactionsByCategoryAndTime(cardId int, ca
 	var transactions []app.Transaction
 	for rows.Next() {
 		var transaction app.Transaction
-		err := rows.Scan(&transaction.Id, &transaction.CardId, &transaction.Time, &transaction.Amount, &transaction.ExpenseCategory, &transaction.TransactionType, &transaction.Location, &transaction.DestinationAccountId, &transaction.SourceAccountId)
+		err := rows.Scan(&transaction.Id, &transaction.CardId, &transaction.Time, &transaction.Amount, &transaction.ExpenseCategory, &transaction.TransactionType, &transaction.Location)
 		if err != nil {
 			log.Fatal(err)
 		}
